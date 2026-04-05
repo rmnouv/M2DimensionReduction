@@ -3,7 +3,7 @@
 **M2 Data Science Project — Université d'Évry, 2026**
 
 **Author:** Ratanakmuny NOUV  
-**Supervisor:** Christophe Ambroise
+**Professor:** Christophe Ambroise
 
 ## Overview
 
