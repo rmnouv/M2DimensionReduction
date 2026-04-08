@@ -52,6 +52,127 @@ Execute all cells in order. All experiments use fixed random seeds (`SEED=42`) f
 └── README.md
 ```
 
+## Using `src/algorithms.py`
+
+The module in [`src/algorithms.py`](src/algorithms.py) provides utility functions and 4 ICA implementations with a shared interface:
+
+1. Prepare whitened observations `X`
+2. Fit a model with `fit(X, W_true=None)`
+3. Recover the estimated sources with `transform(X)`
+
+### Data Format
+
+All functions and classes in this file use the same convention:
+
+- `X`: shape `(D, N)`, with `D` signals and `N` samples
+- Columns of `X` are observations
+- `V`: shape `(D, D)`, the estimated unmixing matrix
+- `Y = V @ X`: recovered source matrix
+
+Important: the algorithms expect pre-whitened input data.
+
+### Importing the Algorithms
+
+```python
+from src.algorithms import (
+    InfomaxBatch,
+    FastICAWrapper,
+    SGD_ICA,
+    EM_ICA,
+    run_experiment,
+)
+```
+
+### Basic Usage
+
+#### `InfomaxBatch`
+
+```python
+algo = InfomaxBatch(n_components=3, lr=0.1, max_iter=1000, tol=1e-7)
+V = algo.fit(X, W_true=W_true)   # W_true is optional
+Y = algo.transform(X)
+history = algo.history_
+```
+
+#### `FastICAWrapper`
+
+```python
+algo = FastICAWrapper(n_components=3, max_iter=500, tol=1e-4, fun="logcosh")
+V = algo.fit(X)
+Y = algo.transform(X)
+```
+
+#### `SGD_ICA`
+
+```python
+algo = SGD_ICA(
+    n_components=3,
+    lr=0.1,
+    decay=2000,
+    batch_size=64,
+    n_epochs=50,
+    seed=42,
+)
+V = algo.fit(X, W_true=W_true)
+Y = algo.transform(X)
+history = algo.history_
+```
+
+#### `EM_ICA`
+
+```python
+algo = EM_ICA(
+    n_components=3,
+    n_gaussians=4,
+    lr=0.1,
+    decay=2000,
+    batch_size=64,
+    n_epochs=50,
+    seed=42,
+)
+V = algo.fit(X, W_true=W_true)
+Y = algo.transform(X)
+params = algo.get_learned_densities()
+```
+
+### Utility Functions
+
+#### `symmetric_decorrelation(V)`
+
+Orthogonalizes a square matrix. This is used internally after gradient updates to keep the unmixing matrix on the orthogonal manifold.
+
+#### `adaptive_score(Y)`
+
+Computes the source-wise score function by switching between super-Gaussian and sub-Gaussian forms according to kurtosis.
+
+### Running Multi-Algorithm Comparisons
+
+Use `run_experiment(...)` to evaluate several algorithms across multiple random seeds:
+
+```python
+from src.algorithms import InfomaxBatch, FastICAWrapper, SGD_ICA, EM_ICA, run_experiment
+
+algorithms = {
+    "Infomax Batch": InfomaxBatch(n_components=3, lr=0.1),
+    "FastICA": FastICAWrapper(n_components=3),
+    "SGD-ICA": SGD_ICA(n_components=3, lr=0.1, batch_size=64, n_epochs=50, seed=42),
+    "EM-ICA": EM_ICA(n_components=3, n_gaussians=4, lr=0.1, batch_size=64, n_epochs=50, seed=42),
+}
+
+results = run_experiment(X, W_true, algorithms, n_runs=10, seed_base=0)
+```
+
+Returned structure:
+
+```python
+{
+    "Algorithm name": {
+        "amari_scores": [...],
+        "histories": [...],
+    }
+}
+```
+
 ## Datasets
 
 | Dataset | Type | Sources | Amari Available |
